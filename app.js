@@ -1,4 +1,54 @@
 
+// Locla Storage
+const StorageControler = (function () {
+
+  //public
+  return {
+  // set local storage
+localSet: (item) => {
+     let element;
+
+     if (localStorage.getItem('element') === null) {
+       element = [];
+
+       element.push(item);
+
+       localStorage.setItem('element', JSON.stringify(element));
+     }else {
+       element = JSON.parse(localStorage.getItem('element'));
+
+       element.push(item);
+
+       localStorage.setItem('element', JSON.stringify(element));
+     }
+    
+   },
+// get local storage function
+getStorage: () => {
+     let item;
+
+      if (localStorage.getItem('element') === null) {
+        item = [];
+      }else {
+        item = JSON.parse(localStorage.getItem('element'));
+      }
+      return item;
+     },
+// delete item from locla storage
+deleteIte: (id) => {
+     
+    items = JSON.parse(localStorage.getItem('element'));
+      
+   const index = items.findIndex(el => {
+           if (id === el.id) {
+              return el;
+           }
+        }); 
+    items.splice(index, 1)
+    localStorage.setItem('element', JSON.stringify(items));    
+        }
+     }
+})();
 
 // Data controler
 const DataControler = (function () {
@@ -12,13 +62,14 @@ const DataControler = (function () {
   }
 // data structure (tye object got form input are stored in data.item array)
   data = {
-    item: [],
+    item: StorageControler.getStorage(),
     totalValueInc: 0,
     totalValueExp: 0,
     totalBudget: 0,
     precentage: 0,
     updated_at: moment().format('MMMM - Do, YYYY')
   };
+
 // calculate precentage and set data structure proprety
   function calculatePrecentage () {
     const precent =Math.round((data.totalValueExp / data.totalValueInc) * 100);
@@ -218,7 +269,6 @@ deleteItemFromUi: (id) => {
 changeClassUi: (type) => {
 
     let inputs = document.querySelectorAll(Domselectors.descriptionValue + ',' + Domselectors.amountValue + ',' + Domselectors.btnAddItem);
-    console.log(inputs)
 
     inputs = Array.from(inputs);
 
@@ -245,7 +295,7 @@ getDomSelectors: () => {
 
 
 //App Controler 
-const AppControler = (function (DataCtr, UICtr) {
+const AppControler = (function (DataCtr, StorageCtr, UICtr) {
 // event handler container function - to be called from init function
   function eventHandler () {
     // render the selectors availble here
@@ -291,6 +341,9 @@ const AppControler = (function (DataCtr, UICtr) {
 
       //display data
       displayData();
+
+      //local Storage
+      StorageCtr.localSet(newItem)
     }
  }
 // display data function calls the UI display functions with data that they needed
@@ -319,6 +372,7 @@ function deleteItem (e) {
   DataCtr.deleteItemFromData(idString);
   UICtr.deleteItemFromUi(id);
   DataCtr.updateBudget();
+  StorageCtr.deleteIte(idString);
   displayData();
 }
 // change border function calls lass function in UI wuith the event target value
@@ -330,6 +384,20 @@ function changeBorder (e) {
 //init function. this starts the application at the first lunch
 init: () => {
       dataStr = DataCtr.returnData();
+     // loop trough the data.item arrat once the locat storage has returned and then render data to UI
+      dataStr.item.forEach(item => {
+        //update budget
+        DataCtr.updateBudget();
+
+      // add item to ui 
+      UICtr.addItemToUi(item, dataStr.totalBudget);
+
+      // update total precentage
+      UICtr.updatePrecent(dataStr);
+
+      //display data
+      displayData();
+      })
    eventHandler();
       // display data with 0 value everywhere once the application has started
     displayData({
@@ -338,7 +406,8 @@ init: () => {
         totalValueExp: 0
        });
     }  
-  }
-})(DataControler, UiControler);
+  }  
+
+})(DataControler, StorageControler, UiControler);
 // call init function, the only call from outside the modules necesary 
 AppControler.init();
